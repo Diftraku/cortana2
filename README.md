@@ -11,3 +11,10 @@ This project is an effort to prot the Python 2 version of the Sopel modules to P
 ## Credits
 All original code belongs to Mursu and is available at https://version.aalto.fi/gitlab/sinkkov1/cortana-sopel/tree/master (checked on 22.10.2019).
 Cortana is a character from the Halo -series of games made by Bungie and 343 Studios.
+
+## Development and Usage
+The contents of this repository are mainly for reference purposes and actually running the bot.
+
+No effort is made to make this code portable across different platforms other than this is intended to run on.
+
+Sopel is running in a virtualenv on the Raspberry Pi located in the clubroom.
