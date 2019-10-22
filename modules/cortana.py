@@ -19,8 +19,6 @@ def setup(bot):
 @module.rate(channel=5)
 def toggle_status(bot, trigger):
     '''Toggle the clubroom status from open to closed and back'''
-    if bot.memory['clubroom_status'] == trigger.group(1):
-        # Refuse to
     bot.memory['clubroom_status'] = trigger.group(1)
     # Update the channel topic, retaining the previous extra info
     update_status(bot)
