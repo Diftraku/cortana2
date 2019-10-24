@@ -1,6 +1,8 @@
-from gpiozero import LED, Button
+from datetime import datetime
 from pathlib import Path
 from time import sleep
+
+from gpiozero import LED, Button
 
 PRESENCE_FILE = '/tmp/cortana.presence'
 
@@ -33,6 +35,7 @@ def main():
                 indicator.on()
             else:
                 indicator.off()
+            print(f'{datetime.now().isoformat("seconds")} - Toggling LED state')
             last_state = state
 
         # Sleep before next round
@@ -53,6 +56,7 @@ def handle_button():
         presence_file.unlink()
     else:
         presence_file.touch()
+    print(f'{datetime.now().isoformat("seconds")} - Toggling presence state')
 
 
 if __name__ == "__main__":
