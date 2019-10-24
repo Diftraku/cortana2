@@ -58,7 +58,7 @@ def set_clubroom_status(bot, trigger):
         }
 
     # Update memory with new status and extra
-    bot.memory['clubroom_status'][channel]['presence'] = extra
+    bot.memory['clubroom_status'][channel]['presence'] = presence
     bot.memory['clubroom_status'][channel]['status'] = status
     bot.memory['clubroom_status'][channel]['extra'] = extra
 
