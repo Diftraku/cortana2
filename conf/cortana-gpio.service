@@ -1,0 +1,12 @@
+[Unit]
+Description=Cortana GPIO-listener
+After=multi-user.target
+
+[Service]
+User=sopel
+Group=sopel
+Type=idle
+ExecStart=/opt/sopel/.pyenv/bin/python3 /home/sopel/cortana2/utils/handle_gpio.py
+
+[Install]
+WantedBy=multi-user.target
