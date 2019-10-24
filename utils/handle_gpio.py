@@ -1,6 +1,7 @@
 from datetime import datetime
 from pathlib import Path
 from time import sleep
+import logging
 
 from gpiozero import LED, Button
 
@@ -10,12 +11,21 @@ def main():
     # setup
     # See https://www.raspberrypi.org/documentation/usage/gpio/
     # Pins are on the edge of the connector, right next to each-other
-    # Indicator should connect the positive side (anode) to GPIO pin 20
-    # and negative side (cathode) to ground 
-    # Button should connect 3V3 to GPIO pin 21
-    indicator = LED(pin=20, initial_value=False)
-    button = Button(pin=21, pull_up=False, bounce_time=0.5)
+    # Indicator should connect the positive side (anode, yellow wire) to GPIO pin 23
+    # and negative side (cathode, orange wire) to ground
+    # Button should connect 3V3 (blue wire) to GPIO pin 24 (green wire)
+    indicator = LED(pin=23, initial_value=False)
+    button = Button(pin=24, pull_up=False, bounce_time=0.5)
     button.when_pressed = handle_button
+    
+    # Setup logging
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
+    handler = logging.StreamHandler()
+    handler.setLevel(logging.INFO)
+    handler.setFormatter(logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    logger.addHandler(handler)
 
     # This is used to communicate the state relatively "thread-safely"
     # to the Sopel bot
@@ -23,6 +33,8 @@ def main():
 
     # Prime the state from file, defaults to False if file does not exist
     last_state = state = read_state(presence_file)
+
+    logger.info('Starting main loop')
 
     while True:
         # Update the state from file
@@ -35,7 +47,7 @@ def main():
                 indicator.on()
             else:
                 indicator.off()
-            print(f'{datetime.now().isoformat("seconds")} - Toggling LED state')
+            logger.info('Toggling LED state: %s', 'on' if state else 'off')
             last_state = state
 
         # Sleep before next round
@@ -53,10 +65,11 @@ def handle_button():
     '''Toggle presence based on button input'''
     presence_file = Path(PRESENCE_FILE)
     if presence_file.exists():
+        logging.getLogger(__name__).info('Toggling local presence state: absent')
         presence_file.unlink()
     else:
+        logging.getLogger(__name__).info('Toggling local presence state: present')
         presence_file.touch()
-    print(f'{datetime.now().isoformat("seconds")} - Toggling presence state')
 
 
 if __name__ == "__main__":
