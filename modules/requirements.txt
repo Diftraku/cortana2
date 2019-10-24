@@ -1,2 +1,0 @@
-sopel==6.6.9
-gpiozero==1.5.1
