@@ -40,9 +40,9 @@ def set_clubroom_status(bot, trigger):
             status = 'closed'
             presence = False
 
-        if len(trigger.groups()) > 2:
+        if trigger.group(2) is not None :
             # Something extra was said, add it to the extra status
-            extra = trigger.groups()[2:]
+            extra = trigger.group(2)
     else:
         # Assume open but with extra status
         presence = True
@@ -80,7 +80,7 @@ def update_presence(bot):
     for channel, data in bot.memory['clubroom_status'].items():
         local_status[channel] = data
 
-    for channel, data in local_status:
+    for channel, data in local_status.items():
         if presence_file.exists() and not data['presence']:
             # Mark clubroom as open
             # @TODO Randomize these?
@@ -107,7 +107,7 @@ def update_status(bot, channel):
     # Build the status string (with optional extra stuff)
     status = bot.memory['clubroom_status'][channel]['status']
     if bot.memory['clubroom_status'][channel]['extra']:
-        status += ', ' + bot.memory['clubroom_status'][channel]['extra']
+        status = status + ', ' + bot.memory['clubroom_status'][channel]['extra']
 
     # Replace the first element in topic with clubroom status
     topic[0] = f'{STATUS_PREFIX}{status} '
