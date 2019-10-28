@@ -1,9 +1,11 @@
+#!/usr/bin/env python3
+
 from datetime import datetime
 from pathlib import Path
 from time import sleep
 import logging
 
-from gpiozero import LED, Button
+from gpiozero import LED, PWMLED, Button
 
 PRESENCE_FILE = '/tmp/cortana.presence'
 
@@ -14,10 +16,12 @@ def main():
     # Indicator should connect the positive side (anode, yellow wire) to GPIO pin 23
     # and negative side (cathode, orange wire) to ground
     # Button should connect 3V3 (blue wire) to GPIO pin 24 (green wire)
-    indicator = LED(pin=23, initial_value=False)
-    button = Button(pin=24, pull_up=False, bounce_time=0.5)
-    button.when_pressed = handle_button
-    
+    away_indicator = PWMLED(pin=18, active_high=False, initial_value=False)
+    home_indicator = LED(pin=23, active_high=False, initial_value=False)
+    button = Button(pin=17, pull_up=False)
+    button.when_held = handle_button
+    button.hold_time = 1
+
     # Setup logging
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
@@ -44,9 +48,11 @@ def main():
         if state != last_state:
             # Set LED based on the state
             if state:
-                indicator.on()
+                home_indicator.on()
+                away_indicator.off()
             else:
-                indicator.off()
+                home_indicator.off()
+                away_indicator.pulse(fade_in_time=1, fade_out_time=3)
             logger.info('Toggling LED state: %s', 'on' if state else 'off')
             last_state = state
 
