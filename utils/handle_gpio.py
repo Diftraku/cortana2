@@ -20,7 +20,7 @@ def main():
     home_indicator = LED(pin=23, active_high=False, initial_value=False)
     button = Button(pin=17, pull_up=False)
     button.when_held = handle_button
-    button.hold_time = 1
+    button.hold_time = 0.5
 
     # Setup logging
     logger = logging.getLogger(__name__)
