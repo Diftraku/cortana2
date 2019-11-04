@@ -22,56 +22,56 @@ def setup(bot):
         bot.memory['clubroom_status'] = SopelMemory()
 
 
-@module.nickname_commands('open', 'auki', 'closed', 'kiinni')
+@module.nickname_commands('open', 'auki', 'closed', 'kiinni', 'status')
 @module.rule(r'^Hey,?\s'+BOT_NICK+r',?\s?(.*)$')
 def set_clubroom_status(bot, trigger):
-    '''Set clubroom status'''
-    # Get defaults
+    '''Update presence and status from IRC'''
     channel = trigger.sender
     status = trigger.group(1)
     presence = False
     extra = ''
 
+    # Process true-false-moose
     if status in ['open', 'auki', 'closed', 'kiinni']:
-        if status in ['open', 'auki']:
+        # Handle simple open/closed states
+        if status in ['open', 'auki',]:
             status = 'open'
             presence = True
         else:
             status = 'closed'
             presence = False
 
-        if trigger.group(2) is not None :
-            # Something extra was said, add it to the extra status
+        # Handle additional information
+        if trigger.group(2) is not None:
             extra = trigger.group(2)
     else:
-        # Assume open but with extra status
+        # Handle moose-state, status will be extra
+        # and the presence will be open
         presence = True
         extra = status
+        if status == 'status' and trigger.group(2) is not None:
+            # Grab extra from rest of the trigger,
+            # same as with boolean state above
+            extra = trigger.group(2)
         status = 'open'
 
-    # Add channel to memory
-    if trigger.sender not in bot.memory['clubroom_status']:
-        bot.memory['clubroom_status'][channel] = {
-            'presence': False,
-            'status': 'closed',
-            'extra': ''
-        }
-
     # Update memory with new status and extra
-    bot.memory['clubroom_status'][channel]['presence'] = presence
-    bot.memory['clubroom_status'][channel]['status'] = status
-    bot.memory['clubroom_status'][channel]['extra'] = extra
+    bot.memory['clubroom_status'][channel] = {
+        'presence': presence,
+        'status': status,
+        'extra': extra
+    }
 
-    # Update the channel topic, retaining the previous extra info
-    update_status(bot, trigger.sender)
+    # Sync state to channel topic
+    sync_channel_topic(bot, trigger.sender)
 
-    # Update presence file
-    update_presence_file(presence)
+    # Sync state to presence file
+    sync_presence_file(bot, trigger.sender)
 
 
 @module.interval(5)
-def update_presence(bot):
-    '''Update the presence for clubroom via button'''
+def sync_presence_timer(bot):
+    '''Update channel topic from presence file'''
     presence_file = Path(PRESENCE_FILE)
 
     # Make a local copy of the memory
@@ -86,17 +86,17 @@ def update_presence(bot):
             # @TODO Randomize these?
             bot.memory['clubroom_status'][channel]['status'] = 'open'
             bot.memory['clubroom_status'][channel]['presence'] = True
-            update_status(bot, channel)
+            sync_channel_topic(bot, channel)
 
         if not presence_file.exists() and data['presence']:
             # Mark clubroom as closed
             # @TODO Randomize these?
             bot.memory['clubroom_status'][channel]['status'] = 'closed'
             bot.memory['clubroom_status'][channel]['presence'] = False
-            update_status(bot, channel)
+            sync_channel_topic(bot, channel)
 
 
-def update_status(bot, channel):
+def sync_channel_topic(bot, channel):
     '''Helper for updating the clubroom status to the channel'''
     # Get the current topic and split it by the separator
     topic = bot.channels[channel].topic.split(TOPIC_SEPARATOR)
@@ -116,8 +116,14 @@ def update_status(bot, channel):
     set_topic(bot, channel, f'{TOPIC_SEPARATOR}'.join(topic))
 
 
-def update_presence_file(presence):
+def sync_presence_file(bot, channel):
+    '''Sync state from memory to presence file'''
     presence_file = Path(PRESENCE_FILE)
+
+    # Get the presence from memory
+    presence = bot.memory['clubroom_status'][channel]['presence']
+
+    # Link or unlink the file, depending on the desired state
     if presence and not presence_file.exists():
         presence_file.touch()
     if not presence and presence_file.exists():
