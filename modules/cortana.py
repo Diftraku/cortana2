@@ -3,10 +3,12 @@ Cortana
 
 Dedicated bot for the OtaHOAS clubroom at JMT11CD
 """
+import re
 from pathlib import Path
-from sopel import module
-from sopel.tools import SopelMemory
 
+from sopel import module
+from sopel.tools import (SopelMemory, get_command_pattern,
+                         get_nickname_command_regexp)
 
 STATUS_PREFIX = 'JMT11CD: '  # @TODO Move to a channel specific config
 TOPIC_SEPARATOR = '|'  # @TODO Same as above
@@ -17,6 +19,7 @@ TOPIC_COMMANDS = [
     '(?i)open[,:]?', '(?i)auki[,:]?', '(?i)closed[,:]?',
     '(?i)kiinni[,:]?', '(?i)status[,:]?', '(?i)reporting[,:]?'
 ]
+TOPIC_COMMANDS_COMBINED = '|'.join(TOPIC_COMMANDS)
 # Regex rules for triggering nick commands above
 TOPIC_RULES = [
     r'^Hey,?\s$nickname,?\s?(.*)$'
@@ -37,10 +40,36 @@ def setup(bot):
 
 @module.nickname_commands(*TOPIC_COMMANDS)
 @module.rule(*TOPIC_RULES)
-def set_clubroom_status(bot, trigger):
+def handle_irc_commands(bot, trigger):
     '''Update presence and status from IRC'''
     channel = trigger.sender
     status = trigger.group(1).lower().translate(str.maketrans('', '', ',:'))
+    rest = trigger.group(2)
+    update_clubroom_status(bot, channel, status, rest)
+
+@module.rule(r"^<(.*)>\s($nickname[\s\:\,]?.*?)$")
+def handle_teleirc_commands(bot, trigger):
+    """Method for mangling the trigger enough to pass to IRC side"""
+    # Group 1 has sender's Telegram username
+    #sender = trigger.group(1)
+    # Group 2 has the rest of the line, including the bot nickname
+    line = trigger.group(2)
+
+    # Compare against the known commands
+    regex = get_nickname_command_regexp(
+        bot.config.core.nick, TOPIC_COMMANDS_COMBINED, bot.config.core.alias_nicks)
+    match = re.match(regex, line)
+
+    if not match:
+        return
+
+    channel = trigger.sender
+    status = match.group(1).lower().translate(str.maketrans('', '', ',:'))
+    rest = match.group(2)
+    update_clubroom_status(bot, channel, status, rest)
+
+
+def update_clubroom_status(bot, channel, status, rest):
     presence = False
     extra = ''
 
@@ -55,17 +84,17 @@ def set_clubroom_status(bot, trigger):
             presence = False
 
         # Handle additional information
-        if trigger.group(2) is not None:
-            extra = trigger.group(2)
+        if rest is not None:
+            extra = rest
     else:
         # Handle moose-state, status will be extra
         # and the presence will be open
         presence = True
         extra = status
-        if status == 'status' and trigger.group(2) is not None:
+        if status == 'status' and rest is not None:
             # Grab extra from rest of the trigger,
             # same as with boolean state above
-            extra = trigger.group(2)
+            extra = rest
         status = 'open'
 
     # Update memory with new status and extra
@@ -76,10 +105,10 @@ def set_clubroom_status(bot, trigger):
     }
 
     # Sync state to channel topic
-    sync_channel_topic(bot, trigger.sender)
+    sync_channel_topic(bot, channel)
 
     # Sync state to presence file
-    sync_presence_file(bot, trigger.sender)
+    sync_presence_file(bot, channel)
 
 
 @module.interval(5)
