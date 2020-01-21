@@ -20,6 +20,13 @@ PRESENCE_FILE = '/tmp/cortana.presence'
 def setup(bot):
     if 'clubroom_status' not in bot.memory:
         bot.memory['clubroom_status'] = SopelMemory()
+    for channel in bot.config.core.channels:
+        # Initialize state for each autojoin channel
+        bot.memory['clubroom_status'][channel] = {
+            'presence': False,
+            'status': 'closed',
+            'extra': ''
+        }
 
 
 @module.nickname_commands('open', 'auki', 'closed', 'kiinni', 'status')
