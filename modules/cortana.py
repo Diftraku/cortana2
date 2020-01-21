@@ -8,13 +8,19 @@ from sopel import module
 from sopel.tools import SopelMemory
 
 
-STATUS_PREFIX = 'JMT11CD: '
-TOPIC_SEPARATOR = '|'
-# @TODO Get this from config?
-#       Probably not possible since we use
-#       decorators for hooking the regex 
-BOT_NICK = 'Cortana'
-PRESENCE_FILE = '/tmp/cortana.presence'
+STATUS_PREFIX = 'JMT11CD: '  # @TODO Move to a channel specific config
+TOPIC_SEPARATOR = '|'  # @TODO Same as above
+PRESENCE_FILE = '/tmp/cortana.presence'  # @TODO Could do the same here?
+
+# Nick commands to change topic
+TOPIC_COMMANDS = [
+    '(?i)open', '(?i)auki', '(?i)closed',
+    '(?i)kiinni', '(?i)status', '(?i)reporting'
+]
+# Regex rules for triggering nick commands above
+TOPIC_RULES = [
+    r'^Hey,?\s$nickname,?\s?(.*)$'
+]
 
 
 def setup(bot):
@@ -29,12 +35,12 @@ def setup(bot):
         }
 
 
-@module.nickname_commands('open', 'auki', 'closed', 'kiinni', 'status')
-@module.rule(r'^Hey,?\s'+BOT_NICK+r',?\s?(.*)$')
+@module.nickname_commands(*TOPIC_COMMANDS)
+@module.rule(*TOPIC_RULES)
 def set_clubroom_status(bot, trigger):
     '''Update presence and status from IRC'''
     channel = trigger.sender
-    status = trigger.group(1)
+    status = trigger.group(1).lower()
     presence = False
     extra = ''
 
