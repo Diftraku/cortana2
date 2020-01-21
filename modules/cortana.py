@@ -93,6 +93,8 @@ def sync_presence_timer(bot):
             # @TODO Randomize these?
             bot.memory['clubroom_status'][channel]['status'] = 'open'
             bot.memory['clubroom_status'][channel]['presence'] = True
+            # Channel topic requires updating
+            # @TODO Sniff the topic to prevent spamming
             sync_channel_topic(bot, channel)
 
         if not presence_file.exists() and data['presence']:
@@ -100,12 +102,17 @@ def sync_presence_timer(bot):
             # @TODO Randomize these?
             bot.memory['clubroom_status'][channel]['status'] = 'closed'
             bot.memory['clubroom_status'][channel]['presence'] = False
+            # Channel topic requires updating
+            # @TODO Sniff the topic to prevent spamming
             sync_channel_topic(bot, channel)
 
 
 def sync_channel_topic(bot, channel):
     '''Helper for updating the clubroom status to the channel'''
     # Get the current topic and split it by the separator
+    if channel not in bot.channels:
+        # Skip updating at this time, bot is not currently on the channel
+        return
     topic = bot.channels[channel].topic.split(TOPIC_SEPARATOR)
     if len(topic) == 1:
         # Pad the topic with a place for our status
