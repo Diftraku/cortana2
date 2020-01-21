@@ -14,8 +14,8 @@ PRESENCE_FILE = '/tmp/cortana.presence'  # @TODO Could do the same here?
 
 # Nick commands to change topic
 TOPIC_COMMANDS = [
-    '(?i)open', '(?i)auki', '(?i)closed',
-    '(?i)kiinni', '(?i)status', '(?i)reporting'
+    '(?i)open[,:]?', '(?i)auki[,:]?', '(?i)closed[,:]?',
+    '(?i)kiinni[,:]?', '(?i)status[,:]?', '(?i)reporting[,:]?'
 ]
 # Regex rules for triggering nick commands above
 TOPIC_RULES = [
@@ -40,7 +40,7 @@ def setup(bot):
 def set_clubroom_status(bot, trigger):
     '''Update presence and status from IRC'''
     channel = trigger.sender
-    status = trigger.group(1).lower()
+    status = trigger.group(1).lower().translate(str.maketrans('', '', ',:'))
     presence = False
     extra = ''
 
