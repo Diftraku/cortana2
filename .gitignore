@@ -103,3 +103,9 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+
+# Sopel artifacts
+sopel.db
+sopel.conf
+sopel-sopel.conf.pid
