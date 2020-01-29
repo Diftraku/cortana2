@@ -17,7 +17,8 @@ PRESENCE_FILE = '/tmp/cortana.presence'  # @TODO Could do the same here?
 # Nick commands to change topic
 TOPIC_COMMANDS = [
     '(?i)open[,:]?', '(?i)auki[,:]?', '(?i)closed[,:]?',
-    '(?i)kiinni[,:]?', '(?i)status[,:]?', '(?i)reporting[,:]?'
+    '(?i)kiinni[,:]?', '(?i)status[,:]?', '(?i)reporting[,:]?',
+    '(?i)reserved[,:]?', '(?i)varattu[,:]?'
 ]
 TOPIC_COMMANDS_COMBINED = '|'.join(TOPIC_COMMANDS)
 # Regex rules for triggering nick commands above
@@ -96,11 +97,12 @@ def update_clubroom_status(bot, channel, status, rest):
         # and the presence will be open
         presence = True
         extra = status
-        if status == 'status' and rest is not None:
+        if rest is not None:
             # Grab extra from rest of the trigger,
             # same as with boolean state above
             extra = rest
-        status = 'open'
+        if status == 'status' and rest is not None:
+            status = 'open'
 
     # Update memory with new status and extra
     bot.memory['clubroom_status'][channel] = {
