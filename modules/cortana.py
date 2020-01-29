@@ -44,8 +44,11 @@ def handle_irc_commands(bot, trigger):
     '''Update presence and status from IRC'''
     channel = trigger.sender
     status = trigger.group(1).lower().translate(str.maketrans('', '', ',:'))
-    rest = trigger.group(2)
+    rest = None
+    if len(trigger.groups()) > 1:
+        rest = trigger.group(2)
     update_clubroom_status(bot, channel, status, rest)
+
 
 @module.rule(r"^<(.*)>\s($nickname[\s\:\,]?.*?)$")
 def handle_teleirc_commands(bot, trigger):
@@ -65,7 +68,9 @@ def handle_teleirc_commands(bot, trigger):
 
     channel = trigger.sender
     status = match.group(1).lower().translate(str.maketrans('', '', ',:'))
-    rest = match.group(2)
+    rest = None
+    if len(match.groups()) > 1:
+        rest = match.group(2)
     update_clubroom_status(bot, channel, status, rest)
 
 
