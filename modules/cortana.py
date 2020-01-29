@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 
 from sopel import module
-from sopel.tools import (SopelMemory, get_command_pattern,
+from sopel.tools import (SopelMemory, events, get_command_pattern,
                          get_nickname_command_regexp)
 
 STATUS_PREFIX = 'JMT11CD: '  # @TODO Move to a channel specific config
@@ -73,6 +73,39 @@ def handle_teleirc_commands(bot, trigger):
     if len(match.groups()) > 1:
         rest = match.group(2)
     update_clubroom_status(bot, channel, status, rest)
+
+
+@module.event(events.RPL_TOPIC, events.RPL_NOTOPIC)
+@module.rule('.*')  # Dummy to make event match work (rtfm)
+def handle_topic(bot, trigger):
+    """Method for mangling the trigger enough to pass to IRC side"""
+    if len(trigger.args) < 3:
+        # No topic set
+        # @TODO Set the topic based on current state
+        return
+
+    _, channel, topic = trigger.args
+    status, _, topic = topic.partition(TOPIC_SEPARATOR)
+    status = status.replace(STATUS_PREFIX, '')
+    status, _, extra = status.partition(',')
+
+    # Check if topic needs updating
+    if channel in bot.memory['clubroom_status']:
+        clubroom_status = bot.memory['clubroom_status'][channel]
+        needs_updating = False
+        if status != clubroom_status['status']:
+            needs_updating = True
+        if extra != clubroom_status['extra']:
+            needs_updating = True
+        if needs_updating:
+            # Update memory and sync the file
+            presence = True if status in ['open', 'reserved'] else False
+            bot.memory['clubroom_status'][channel] = {
+                'presence': presence,
+                'status': status,
+                'extra': extra
+            }
+            sync_presence_file(bot, channel)
 
 
 def update_clubroom_status(bot, channel, status, rest):
