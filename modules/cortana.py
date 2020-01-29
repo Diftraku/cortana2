@@ -104,6 +104,8 @@ def update_clubroom_status(bot, channel, status, rest):
         if status == 'status' and rest is not None:
             # We have a status report with extra stuff, mark as open
             status = 'open'
+        if status in ['varattu', 'reserved']:
+            status = 'reserved'
 
     # Update memory with new status and extra
     bot.memory['clubroom_status'][channel] = {
