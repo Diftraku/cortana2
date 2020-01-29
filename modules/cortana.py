@@ -12,7 +12,7 @@ from sopel.tools import (SopelMemory, get_command_pattern,
 
 STATUS_PREFIX = 'JMT11CD: '  # @TODO Move to a channel specific config
 TOPIC_SEPARATOR = '|'  # @TODO Same as above
-PRESENCE_FILE = '/tmp/cortana.presence'  # @TODO Could do the same here?
+PRESENCE_FILE_TEMPLATE = '/tmp/cortana.presence.{}'
 
 # Nick commands to change topic
 TOPIC_COMMANDS = [
@@ -102,6 +102,7 @@ def update_clubroom_status(bot, channel, status, rest):
             # same as with boolean state above
             extra = rest
         if status == 'status' and rest is not None:
+            # We have a status report with extra stuff, mark as open
             status = 'open'
 
     # Update memory with new status and extra
@@ -121,8 +122,6 @@ def update_clubroom_status(bot, channel, status, rest):
 @module.interval(5)
 def sync_presence_timer(bot):
     '''Update channel topic from presence file'''
-    presence_file = Path(PRESENCE_FILE)
-
     # Make a local copy of the memory
     # Iterating the dictionary you are modifying is bad 
     local_status = {}
@@ -130,6 +129,7 @@ def sync_presence_timer(bot):
         local_status[channel] = data
 
     for channel, data in local_status.items():
+        presence_file = Path(PRESENCE_FILE_TEMPLATE.format(channel))
         if presence_file.exists() and not data['presence']:
             # Mark clubroom as open
             # @TODO Randomize these?
@@ -174,7 +174,7 @@ def sync_channel_topic(bot, channel):
 
 def sync_presence_file(bot, channel):
     '''Sync state from memory to presence file'''
-    presence_file = Path(PRESENCE_FILE)
+    presence_file = Path(PRESENCE_FILE_TEMPLATE.format(channel))
 
     # Get the presence from memory
     presence = bot.memory['clubroom_status'][channel]['presence']
