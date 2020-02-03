@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import os
 from datetime import datetime
 from pathlib import Path
 from time import sleep
@@ -7,7 +7,7 @@ import logging
 
 from gpiozero import LED, PWMLED, Button
 
-PRESENCE_FILE = '/tmp/cortana.presence'
+PRESENCE_FILE = os.environ.get('PRESENCE_FILE', '/tmp/cortana.presence')
 
 def main():
     # setup
