@@ -5,6 +5,7 @@ Dedicated bot for the OtaHOAS clubroom at JMT11CD
 """
 import re
 from pathlib import Path
+from datetime import datetime
 
 from sopel import module
 from sopel.tools import (SopelMemory, events, get_command_pattern,
@@ -53,7 +54,7 @@ def handle_irc_commands(bot, trigger):
 
 @module.rule(r"^<(.*)>\s($nickname[\s\:\,]?.*?)$")
 def handle_teleirc_commands(bot, trigger):
-    """Method for mangling the trigger enough to pass to IRC side"""
+    """Trigger for handling bridged messages from TeleIRC"""
     # Group 1 has sender's Telegram username
     #sender = trigger.group(1)
     # Group 2 has the rest of the line, including the bot nickname
@@ -64,14 +65,20 @@ def handle_teleirc_commands(bot, trigger):
         bot.config.core.nick, TOPIC_COMMANDS_COMBINED, bot.config.core.alias_nicks)
     match = re.match(regex, line)
 
+    # Bail if no commands matched
     if not match:
         return
 
+    # parse the channel and status
     channel = trigger.sender
     status = match.group(1).lower().translate(str.maketrans('', '', ',:'))
+
+    # grab extra (if any), should always be in group 2
     rest = None
     if len(match.groups()) > 1:
         rest = match.group(2)
+
+    # Fire an update
     update_clubroom_status(bot, channel, status, rest)
 
 
@@ -84,19 +91,32 @@ def handle_topic(bot, trigger):
         # @TODO Set the topic based on current state
         return
 
+    # Expand args into channel name and topic
     _, channel, topic = trigger.args
+
+    # Parse out status bit and the real topic
     status, _, topic = topic.partition(TOPIC_SEPARATOR)
+
+    # Parse out the real status and extra
     status = status.replace(STATUS_PREFIX, '')
     status, _, extra = status.partition(',')
 
     # Check if topic needs updating
+    # @TODO let update_clubroom_status() handle this?
     if channel in bot.memory['clubroom_status']:
+        # Grab the clubroom details from memory
         clubroom_status = bot.memory['clubroom_status'][channel]
+
+        # Set our dirty bit to false
         needs_updating = False
+
+        # Check if we need to set stuff
         if status != clubroom_status['status']:
             needs_updating = True
         if extra != clubroom_status['extra']:
             needs_updating = True
+        
+        # Only change if we have something to change
         if needs_updating:
             # Update memory and sync the file
             presence = True if status in ['open', 'reserved'] else False
@@ -105,17 +125,20 @@ def handle_topic(bot, trigger):
                 'status': status,
                 'extra': extra
             }
+
+            # Fire update to GPIO
             sync_presence_file(bot, channel)
 
 
 def update_clubroom_status(bot, channel, status, rest):
+    '''Do the magic'''
     presence = False
     extra = ''
 
     # Process true-false-moose
     if status in ['open', 'auki', 'closed', 'kiinni']:
         # Handle simple open/closed states
-        if status in ['open', 'auki',]:
+        if status not in ['closed', 'kiinni',]:
             status = 'open'
             presence = True
         else:
@@ -164,23 +187,29 @@ def sync_presence_timer(bot):
         local_status[channel] = data
 
     for channel, data in local_status.items():
+        # @TODO remove these if's an use an if-else instead?
         presence_file = Path(PRESENCE_FILE_TEMPLATE.format(channel))
+        dirty = False
         if presence_file.exists() and not data['presence']:
             # Mark clubroom as open
             # @TODO Randomize these?
+            dirty = True
             bot.memory['clubroom_status'][channel]['status'] = 'open'
             bot.memory['clubroom_status'][channel]['presence'] = True
-            # Channel topic requires updating
-            # @TODO Sniff the topic to prevent spamming
-            sync_channel_topic(bot, channel)
 
         if not presence_file.exists() and data['presence']:
             # Mark clubroom as closed
             # @TODO Randomize these?
+            dirty = True
             bot.memory['clubroom_status'][channel]['status'] = 'closed'
             bot.memory['clubroom_status'][channel]['presence'] = False
-            # Channel topic requires updating
-            # @TODO Sniff the topic to prevent spamming
+            # Clear extra if we're past midnight
+            if datetime.now().hour >= 0:
+                bot.memory['clubroom_status'][channel]['extra'] = ''
+
+        # Channel topic requires updating
+        # @TODO Sniff the topic to prevent spamming
+        if dirty:
             sync_channel_topic(bot, channel)
 
 
@@ -190,6 +219,8 @@ def sync_channel_topic(bot, channel):
     if channel not in bot.channels:
         # Skip updating at this time, bot is not currently on the channel
         return
+
+    # Parse topic into usable chunks by exploding it
     topic = bot.channels[channel].topic.split(TOPIC_SEPARATOR)
     if len(topic) == 1:
         # Pad the topic with a place for our status
@@ -215,6 +246,7 @@ def sync_presence_file(bot, channel):
     presence = bot.memory['clubroom_status'][channel]['presence']
 
     # Link or unlink the file, depending on the desired state
+    # @TODO remove the extra if and turn it into an else
     if presence and not presence_file.exists():
         presence_file.touch()
     if not presence and presence_file.exists():
