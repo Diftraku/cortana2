@@ -36,7 +36,8 @@ def setup(bot):
         bot.memory['clubroom_status'][channel] = {
             'presence': False,
             'status': 'closed',
-            'extra': ''
+            'extra': '',
+            'topic_updated': datetime.now()
         }
 
 
@@ -123,7 +124,8 @@ def handle_topic(bot, trigger):
             bot.memory['clubroom_status'][channel] = {
                 'presence': presence,
                 'status': status,
-                'extra': extra
+                'extra': extra,
+                'topic_updated': datetime.now()
             }
 
             # Fire update to GPIO
@@ -167,7 +169,8 @@ def update_clubroom_status(bot, channel, status, rest):
     bot.memory['clubroom_status'][channel] = {
         'presence': presence,
         'status': status,
-        'extra': extra
+        'extra': extra,
+        'topic_updated': datetime.now()
     }
 
     # Sync state to channel topic
@@ -203,8 +206,11 @@ def sync_presence_timer(bot):
             dirty = True
             bot.memory['clubroom_status'][channel]['status'] = 'closed'
             bot.memory['clubroom_status'][channel]['presence'] = False
-            # Clear extra if we're past midnight
-            if datetime.now().hour >= 0:
+
+            # Clear extra if we're past midnight and the day has changed
+            now = datetime.now()
+            topic_updated = bot.memory['clubroom_status'][channel]['topic_updated']
+            if now.hour >= 0 and now.day != topic_updated.day:
                 bot.memory['clubroom_status'][channel]['extra'] = ''
 
         # Channel topic requires updating
@@ -230,6 +236,7 @@ def sync_channel_topic(bot, channel):
     status = bot.memory['clubroom_status'][channel]['status']
     if bot.memory['clubroom_status'][channel]['extra']:
         status = status + ', ' + bot.memory['clubroom_status'][channel]['extra']
+    bot.memory['clubroom_status'][channel]['topic_updated'] = datetime.now()
 
     # Replace the first element in topic with clubroom status
     topic[0] = f'{STATUS_PREFIX}{status} '
